@@ -38,7 +38,13 @@ def main():
                 "agent_role_persona": "You are Priya, a friendly talent recruiter representing Google.",
                 "initial_greeting_message": "Hello, thank you for taking my call. Am I speaking with Nisarg?",
                 "voice_profile": "priya",
-                "system_prompt_instructions": "Ask for notice period, location, and CTC expectation.",
+                "system_prompt_instructions": "Ask for notice period, location, CTC expectation, and years of experience.",
+                "questions_to_ask": [
+                    "What is your notice period?",
+                    "Where are you currently located?",
+                    "What is your CTC expectation?",
+                    "How many years of experience do you have?"
+                ],
                 "knowledge_context_faqs": "FAQ:\nQ: What is the work model?\nA: We offer a hybrid model with 3 days in office.\nQ: What is the location?\nA: The position is based in Bangalore."
             }, f, indent=2)
     else:

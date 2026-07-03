@@ -11,7 +11,7 @@ from hr_agent.openrouter import get_llm_instance, fallback_extract
 from hr_agent.session.speech import get_vad, get_stt, get_tts
 from hr_agent.dialogue.language import clean_language, clean_speaker
 from hr_agent.dialogue.scripts import build_system_prompt
-from hr_agent.session.participants import CandidateAudioRecorder
+from hr_agent.session.participants import CallAudioRecorder
 from hr_agent.session.pstn import bind_pstn_events, trigger_outbound_dial
 from hr_agent.signal import send_completion_signal
 
@@ -115,7 +115,7 @@ async def run_agent_session(ctx: JobContext):
     )
 
     # 6. Audio Recorder setup
-    recorder = CandidateAudioRecorder(call_id)
+    recorder = CallAudioRecorder(call_id)
 
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(
@@ -124,7 +124,15 @@ async def run_agent_session(ctx: JobContext):
         participant: rtc.RemoteParticipant,
     ):
         if track.kind == rtc.TrackKind.KIND_AUDIO and isinstance(track, rtc.RemoteAudioTrack):
-            recorder.start_recording(track)
+            recorder.start_candidate_recording(track)
+
+    @ctx.room.on("local_track_published")
+    def on_local_track_published(
+        publication: rtc.LocalTrackPublication,
+        track: rtc.Track,
+    ):
+        if track.kind == rtc.TrackKind.KIND_AUDIO and isinstance(track, rtc.LocalAudioTrack):
+            recorder.start_agent_recording(track)
 
     # 7. Bind PSTN disconnect events
     call_ended = asyncio.Event()

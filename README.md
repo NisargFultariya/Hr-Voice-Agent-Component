@@ -5,11 +5,13 @@ A unified candidate calling system replacing external platforms. It includes `hr
 ## Project Structure
 
 ```text
-C:\Users\nisarg.fultariya\Desktop\Voice Agent/
+.
 ├── Dockerfile                  # Unified multi-service Docker container build
 ├── README.md                   # Running instructions
 ├── requirements.txt            # Python environment packages
 ├── agent.py                    # Voice worker main entrypoint
+├── agent.json                  # Agent script & questions configuration
+├── pytest.ini                  # Pytest runner configuration
 ├── hr_agent/                   # LiveKit Worker Package
 │   ├── config.py               # Env configuration loading
 │   ├── metadata.py             # Room/Job JSON metadata parser
@@ -31,6 +33,37 @@ C:\Users\nisarg.fultariya\Desktop\Voice Agent/
 │       └── docker-compose.yml  # Local multi-service orchestration
 └── tests/                      # Full Unit and Mock Test Suite
 ```
+
+---
+
+## Agent Configuration (`agent.json`)
+
+The `agent.json` file in the root directory defines the recruiting bot's persona, greeting, and script. It supports configuring specific questions to ask:
+
+```json
+{
+  "voice_bot_name": "Priya",
+  "agent_role_persona": "You are Priya, a friendly talent recruiter representing Google.",
+  "initial_greeting_message": "Hello, thank you for taking my call. Am I speaking with Nisarg?",
+  "voice_profile": "priya",
+  "system_prompt_instructions": "Ask for notice period, location, CTC expectation, and years of experience.",
+  "questions_to_ask": [
+    "What is your notice period?",
+    "Where are you currently located?",
+    "What is your CTC expectation?",
+    "How many years of experience do you have?"
+  ],
+  "knowledge_context_faqs": "FAQ:\nQ: What is the work model?\nA: We offer a hybrid model with 3 days in office.\nQ: What is the location?\nA: The position is based in Bangalore."
+}
+```
+
+---
+
+## Call Recording and Mixing
+
+During a call, the system captures **both** the candidate's voice (incoming) and the agent's voice (outgoing).
+1. **Timestamp Alignment**: Audio offsets are calculated at the moment each stream publishes, padding the starting frames with silence (`b'\x00'`) to ensure both streams align perfectly in time.
+2. **Mixing**: Upon call completion, the two separate PCM audio files are mixed using 16-bit PCM summation, clipped to prevent distortion, and saved to the final recording path: `./recordings/call-{call_id}.wav`.
 
 ---
 
@@ -92,5 +125,5 @@ It will automatically register with the LiveKit room services and wait for dispa
 ## Running Tests
 Run the test suite using `pytest`:
 ```bash
-pytest tests/
+python -m pytest tests/
 ```
