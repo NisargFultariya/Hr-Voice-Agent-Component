@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Voice Agent - Live Demo Console</title>
+  
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- LiveKit Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #09090e;
+      --card-bg: rgba(18, 18, 29, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #a855f7;
+      --primary-gradient: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --font-outfit: 'Outfit', sans-serif;
+      --font-inter: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: var(--font-inter);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      background: var(--primary-gradient);
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+    }
+
+    .logo-text h1 {
+      font-family: var(--font-outfit);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #4ade80;
+    }
+
+    .system-status .pulse {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent);
+      border-radius: 50%;
+      animation: pulse-glow 2s infinite;
+    }
+
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Glass Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 1.75rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-family: var(--font-outfit);
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #fff;
+    }
+
+    .card-title i {
+      color: var(--primary);
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: #fff;
+      font-family: var(--font-inter);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: var(--font-outfit);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem 1.5rem;
+      border-radius: 0.75rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Call Overlay / Screen */
+    .call-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .call-avatar {
+      width: 7rem;
+      height: 7rem;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      position: relative;
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+    }
+
+    .call-avatar.calling {
+      animation: call-pulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes call-pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(168, 85, 247, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+    }
+
+    .call-status {
+      font-family: var(--font-outfit);
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .call-details {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    /* Audio Wave Animation */
+    .wave-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 40px;
+      margin-bottom: 2rem;
+    }
+
+    .wave-bar {
+      width: 4px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .wave-container.speaking .wave-bar {
+      animation: soundwave 1.2s infinite ease-in-out;
+    }
+
+    .wave-container.speaking .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .wave-container.speaking .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .wave-container.speaking .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .wave-container.speaking .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+    .wave-container.speaking .wave-bar:nth-child(6) { animation-delay: 0.5s; }
+
+    @keyframes soundwave {
+      0%, 100% { height: 8px; background: var(--primary); }
+      50% { height: 40px; background: #6366f1; }
+    }
+
+    /* Call Log List */
+    .log-list {
+      max-height: 600px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .log-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .log-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--primary);
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .log-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .log-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .log-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-completed { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .badge-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge-calling { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+    /* Modal / Expanded Details */
+    .details-panel {
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--card-border);
+      padding-top: 1.5rem;
+    }
+
+    .chat-box {
+      max-height: 300px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 0.75rem;
+    }
+
+    .chat-msg {
+      max-width: 80%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom-left-radius: 0.1rem;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--primary-gradient);
+      color: #fff;
+      border-bottom-right-radius: 0.1rem;
+    }
+
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .param-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+    }
+
+    .param-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .param-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .audio-player {
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    audio::-webkit-media-controls-panel {
+      background-color: #1f1f2e;
+    }
+
+    audio::-webkit-media-controls-play-button,
+    audio::-webkit-media-controls-mute-button {
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <div class="logo-icon">
+          <i class="bi bi-mic-fill"></i>
+        </div>
+        <div class="logo-text">
+          <h1>HR Recruiting Voice Bot</h1>
+          <p>Local Test Console & Live Demo Dashboard</p>
+        </div>
+      </div>
+      <div class="system-status">
+        <span class="pulse"></span>
+        <span>Local Orchestrator Active</span>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Setup Panel (Left) -->
+      <div class="card" id="setup-card">
+        <div class="card-title">
+          <i class="bi bi-gear-fill"></i> Setup Voice Agent & Candidate
+        </div>
+
+        <form id="demo-form">
+          <h3 style="font-family: var(--font-outfit); font-size: 1rem; margin-bottom: 1rem; color: var(--primary);">1. Agent Configuration</h3>
+          
+          <div class="form-group">
+            <label for="agent-name">Voice Bot Name</label>
+            <input type="text" class="form-control" id="agent-name" placeholder="e.g. Priya" value="Priya" required>
+          </div>
+
+          <div class="form-group">
+            <label for="agent-persona">Agent Role / Persona</label>
+            <textarea class="form-control" id="agent-persona" rows="2" placeholder="e.g. You are a friendly talent coordinator representing Google." required>You are Priya, a friendly talent recruiter representing Google.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="agent-greeting">Initial Greeting Message *</label>
+            <textarea class="form-control" id="agent-greeting" rows="2" placeholder="Greeting spoken when caller answers..." required>Hello, thank you for taking my call. Am I speaking with Nisarg?</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="agent-profile">Select Voice Profile</label>
+            <select class="form-control" id="agent-profile">
+              <option value="priya" selected>Priya (Female - Indian Accent)</option>
+              <option value="arvind">Arvind (Male - Indian Accent)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="agent-instructions">System Prompt / Agent Instructions</label>
+            <textarea class="form-control" id="agent-instructions" rows="2" placeholder="Questions/Objective of the call..." required>Ask for notice period, location, and CTC expectation.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="agent-rag">Knowledge Context / FAQs (RAG)</label>
+            <textarea class="form-control" id="agent-rag" rows="3" placeholder="FAQ / Knowledge base documentation...">FAQ:
+Q: What is the work model?
+A: We offer a hybrid model with 3 days in office.
+Q: What is the location?
+A: The position is based in Bangalore.</textarea>
+          </div>
+
+          <h3 style="font-family: var(--font-outfit); font-size: 1rem; margin-top: 1.5rem; margin-bottom: 1rem; color: var(--primary);">2. Candidate Details</h3>
+
+          <div class="form-group">
+            <label for="cand-name">Candidate Name</label>
+            <input type="text" class="form-control" id="cand-name" placeholder="e.g. Nisarg Fultariya" value="Nisarg Fultariya" required>
+          </div>
+
+          <div class="form-group">
+            <label for="cand-phone">Candidate Phone Number</label>
+            <input type="text" class="form-control" id="cand-phone" placeholder="e.g. +919979069166" value="+919979069166" required>
+          </div>
+
+          <div class="button-group">
+            <button type="button" class="btn btn-primary" id="btn-browser-demo">
+              <i class="bi bi-laptop"></i> Call Browser Demo
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-phone-demo">
+              <i class="bi bi-telephone-fill"></i> Call Twilio Phone
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Calling Screen (Left Alternate, hidden by default) -->
+      <div class="card call-overlay" id="calling-card" style="display: none;">
+        <div class="call-avatar calling" id="avatar">
+          <i class="bi bi-telephone-outbound-fill"></i>
+        </div>
+        <div class="call-status" id="call-status-label">Calling Candidate...</div>
+        <div class="call-details" id="call-details-label">Nisarg Fultariya (+919979069166)</div>
+
+        <div class="wave-container" id="wave">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+
+        <div id="audio-container" style="display:none;"></div>
+
+        <button class="btn btn-danger" id="btn-hang-up" style="max-width: 250px;">
+          <i class="bi bi-telephone-x-fill"></i> Hang Up
+        </button>
+      </div>
+
+      <!-- Call Logs & History (Right) -->
+      <div class="card" id="logs-card">
+        <div class="card-title">
+          <i class="bi bi-clock-history"></i> Candidate Call History
+        </div>
+
+        <div class="log-list" id="logs-list-container">
+          <!-- Populated by JavaScript -->
+          <p style="color: var(--text-muted); text-align: center;">Loading call records...</p>
+        </div>
+
+        <!-- Expanded Call Details Panel -->
+        <div class="details-panel" id="details-panel" style="display: none;">
+          <h3 class="card-title" style="font-size: 1.1rem; margin-bottom: 1rem;">
+            <i class="bi bi-file-text-fill"></i> Call Details: <span id="details-candidate-name">Nisarg</span>
+          </h3>
+
+          <div class="param-grid">
+            <div class="param-box">
+              <div class="param-label">Disposition</div>
+              <div class="param-value" id="details-disposition">-</div>
+            </div>
+            <div class="param-box">
+              <div class="param-label">Duration</div>
+              <div class="param-value" id="details-duration">0s</div>
+            </div>
+          </div>
+
+          <div class="chat-box" id="details-chat">
+            <!-- Chat bubble messages -->
+          </div>
+
+          <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Extracted Data</h4>
+          <div id="details-extracted" style="font-size: 0.85rem; padding: 0.75rem; background: rgba(0,0,0,0.1); border-radius: 0.5rem; margin-bottom: 1rem;">
+            <!-- JSON of RAG variables -->
+          </div>
+
+          <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Recording</h4>
+          <audio controls class="audio-player" id="details-audio">
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = ""; // Relative to server root
+
+    // UI Nodes
+    const setupCard = document.getElementById('setup-card');
+    const callingCard = document.getElementById('calling-card');
+    const logsContainer = document.getElementById('logs-list-container');
+    const detailsPanel = document.getElementById('details-panel');
+
+    // Controls
+    const btnBrowserDemo = document.getElementById('btn-browser-demo');
+    const btnPhoneDemo = document.getElementById('btn-phone-demo');
+    const btnHangUp = document.getElementById('btn-hang-up');
+
+    let currentLiveKitRoom = null;
+    let refreshLogsInterval = null;
+
+    // Load Call History on Launch
+    async function loadLogs() {
+      try {
+        const res = await fetch(`${API_URL}/api/campaigns`);
+        if (!res.ok) return;
+        const campaigns = await res.json();
+        
+        let allCandidates = [];
+        for (const camp of campaigns) {
+          const campDetailRes = await fetch(`${API_URL}/api/campaigns/${camp.id}`);
+          if (campDetailRes.ok) {
+            const data = await campDetailRes.json();
+            allCandidates = allCandidates.concat(data.candidates || []);
+          }
+        }
+
+        // Sort by candidate ID descending (most recent first)
+        allCandidates.sort((a, b) => b.id - a.id);
+
+        if (allCandidates.length === 0) {
+          logsContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">No call records found yet.</p>';
+          return;
+        }
+
+        let html = "";
+        for (const cand of allCandidates) {
+          let statusBadge = `<span class="badge badge-completed">Completed</span>`;
+          if (cand.call_status === "calling") {
+            statusBadge = `<span class="badge badge-calling">Calling</span>`;
+          } else if (cand.call_status === "failed") {
+            statusBadge = `<span class="badge badge-failed">Failed</span>`;
+          } else if (cand.call_status === "pending") {
+            statusBadge = `<span class="badge" style="background: rgba(255,255,255,0.05); color: #fff;">Pending</span>`;
+          }
+
+          html += `
+            <div class="log-item" onclick="loadCallDetails(${cand.id}, '${cand.name}')">
+              <div class="log-header">
+                <span class="log-name">${cand.name}</span>
+                <span class="log-date">ID: ${cand.id}</span>
+              </div>
+              <div class="log-meta">
+                <span>Attempt: ${cand.attempt_count}</span>
+                ${statusBadge}
+              </div>
+            </div>
+          `;
+        }
+        logsContainer.innerHTML = html;
+      } catch (err) {
+        console.error("Error loading history logs:", err);
+      }
+    }
+
+    // Load Expanded Call Details
+    async function loadCallDetails(candidateId, name) {
+      try {
+        const res = await fetch(`${API_URL}/api/candidates/${candidateId}/calls`);
+        if (!res.ok) {
+          alert("No calls registered for this candidate yet. Let the scheduler initiate the call first!");
+          return;
+        }
+        const call = await res.json();
+
+        detailsPanel.style.display = "block";
+        document.getElementById('details-candidate-name').innerText = name;
+        document.getElementById('details-disposition').innerText = call.disposition || "in progress";
+        document.getElementById('details-duration').innerText = `${call.duration_seconds || 0}s`;
+
+        // Render extracted parameters
+        document.getElementById('details-extracted').innerHTML = `<pre style="color:#a855f7; font-family:var(--font-inter);">${JSON.stringify(call.extracted_data, null, 2)}</pre>`;
+
+        // Render chat bubble transcripts
+        const chatContainer = document.getElementById('details-chat');
+        chatContainer.innerHTML = "";
+        if (call.transcript && call.transcript.length > 0) {
+          call.transcript.forEach(msg => {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-msg ${msg.role}`;
+            bubble.innerText = msg.text;
+            chatContainer.appendChild(bubble);
+          });
+        } else {
+          chatContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">No transcript compiled.</p>';
+        }
+
+        // Setup audio player source
+        const audio = document.getElementById('details-audio');
+        if (call.recording_url) {
+          audio.src = `${API_URL}/recordings/call-${call.id}.wav`;
+          audio.style.display = "block";
+        } else {
+          audio.style.display = "none";
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Helper to start the dialing sequence via API
+    async function initiateCallFlow() {
+      // 1. Fetch parameters
+      const agentName = document.getElementById('agent-name').value;
+      const agentPersona = document.getElementById('agent-persona').value;
+      const agentGreeting = document.getElementById('agent-greeting').value;
+      const agentProfile = document.getElementById('agent-profile').value;
+      const agentInstructions = document.getElementById('agent-instructions').value;
+      const agentRAG = document.getElementById('agent-rag').value;
+
+      const candName = document.getElementById('cand-name').value;
+      const candPhone = document.getElementById('cand-phone').value;
+
+      // Create Agent
+      const agentRes = await fetch(`${API_URL}/api/agents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: agentName,
+          persona_description: agentPersona,
+          task_description: agentInstructions,
+          voice_speaker: agentProfile,
+          initial_greeting: agentGreeting,
+          knowledge_context: agentRAG
+        })
+      });
+      const agentData = await agentRes.json();
+
+      // Create Campaign
+      const campRes = await fetch(`${API_URL}/api/campaigns`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: agentData.id,
+          name: `Browser Demo with ${agentName}`,
+          scheduled_at: new Date().toISOString()
+        })
+      });
+      const campData = await campRes.json();
+
+      // Upload Candidate CSV string
+      const csvContent = `name,phone_number\n"${candName}","${candPhone}"`;
+      const formData = new FormData();
+      const fileBlob = new Blob([csvContent], { type: 'text/csv' });
+      formData.append("file", fileBlob, "candidates.csv");
+
+      await fetch(`${API_URL}/api/campaigns/${campData.id}/upload`, {
+        method: "POST",
+        body: formData
+      });
+
+      // Start Campaign
+      await fetch(`${API_URL}/api/campaigns/${campData.id}/start`, { method: "POST" });
+
+      return { campaignId: campData.id, candidateName: candName, candidatePhone: candPhone };
+    }
+
+    // Connect to Room internally using LiveKit JS Client SDK
+    async function startBrowserCall(candidateId) {
+      document.getElementById('call-status-label').innerText = "Waiting for room startup...";
+      
+      let tokenData = null;
+      // Poll for room creation
+      for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          const tokenRes = await fetch(`${API_URL}/api/candidates/${candidateId}/token`);
+          if (tokenRes.ok) {
+            tokenData = await tokenRes.json();
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (!tokenData) {
+        alert("Failed to initialize LiveKit room. Make sure docker containers are running!");
+        hangUp();
+        return;
+      }
+
+      document.getElementById('call-status-label').innerText = "Connecting to agent...";
+      
+      try {
+        currentLiveKitRoom = new LivekitClient.Room({
+          adaptiveStream: true,
+          dynacast: true,
+        });
+
+        // Set audio element mapping
+        currentLiveKitRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+          if (track.kind === 'audio') {
+            const audioEl = track.attach();
+            document.getElementById('audio-container').appendChild(audioEl);
+            document.getElementById('call-status-label').innerText = "Connected - Agent Speaking";
+            document.getElementById('wave').className = "wave-container speaking";
+          }
+        });
+
+        currentLiveKitRoom.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+          if (participant.identity.includes("agent") || participant.identity.startsWith("agent_")) {
+            document.getElementById('call-status-label').innerText = "Agent disconnected";
+            setTimeout(hangUp, 2000);
+          }
+        });
+
+        currentLiveKitRoom.on(LivekitClient.RoomEvent.Disconnected, () => {
+          hangUp();
+        });
+
+        // Connect
+        await currentLiveKitRoom.connect(tokenData.url, tokenData.token);
+        
+        // Enable local microphone
+        await currentLiveKitRoom.localParticipant.setMicrophoneEnabled(true);
+        document.getElementById('call-status-label').innerText = "Connected - Microphones Active";
+        document.getElementById('avatar').className = "call-avatar calling";
+
+      } catch (err) {
+        console.error("LiveKit connection failed:", err);
+        alert("Failed to connect to browser audio. Details: " + (err.message || err));
+        hangUp();
+      }
+    }
+
+    // Call End / Cleanup
+    async function hangUp() {
+      if (currentLiveKitRoom) {
+        try {
+          await currentLiveKitRoom.disconnect();
+        } catch (e) {}
+        currentLiveKitRoom = null;
+      }
+
+      document.getElementById('avatar').className = "call-avatar";
+      document.getElementById('wave').className = "wave-container";
+      document.getElementById('audio-container').innerHTML = "";
+      
+      callingCard.style.display = "none";
+      setupCard.style.display = "block";
+      
+      loadLogs();
+    }
+
+    // Setup Call Trigger - Browser Demo Mode
+    btnBrowserDemo.addEventListener('click', async () => {
+      setupCard.style.display = "none";
+      callingCard.style.display = "flex";
+      document.getElementById('call-status-label').innerText = "Preparing demo session...";
+      
+      try {
+        const sessionInfo = await initiateCallFlow();
+        document.getElementById('call-details-label').innerText = `${sessionInfo.candidateName} (Browser Mock Call)`;
+
+        // Get candidates to fetch ID
+        const campDetailRes = await fetch(`${API_URL}/api/campaigns/${sessionInfo.campaignId}`);
+        const campDetails = await campDetailRes.json();
+        const candId = campDetails.candidates[0].id;
+
+        // Start connection
+        await startBrowserCall(candId);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to trigger demo call. Make sure you set LIVEKIT_SIP_TRUNK_ID to empty in .env for browser mock calls.");
+        hangUp();
+      }
+    });
+
+    // Setup Call Trigger - Outbound Telephone Mode
+    btnPhoneDemo.addEventListener('click', async () => {
+      btnPhoneDemo.disabled = true;
+      btnPhoneDemo.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Placing Call...';
+      
+      try {
+        const sessionInfo = await initiateCallFlow();
+        alert(`SIP Call triggered successfully to ${sessionInfo.candidateName} (${sessionInfo.candidatePhone})! When they pick up, the agent will speak to them.`);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to place SIP outbound call. Check your Twilio/LiveKit configuration.");
+      } finally {
+        btnPhoneDemo.disabled = false;
+        btnPhoneDemo.innerHTML = '<i class="bi bi-telephone-fill"></i> Call Twilio Phone';
+        loadLogs();
+      }
+    });
+
+    btnHangUp.addEventListener('click', hangUp);
+
+    // Initial Load & Refresh
+    loadLogs();
+    refreshLogsInterval = setInterval(loadLogs, 4000); // Poll logs list updates every 4 seconds
+
+  </script>
+</body>
+</html>

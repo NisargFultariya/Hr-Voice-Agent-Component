@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  hr-orchestrator:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    container_name: hr-orchestrator
+    command: uvicorn hr_orchestrator.main:app --host 0.0.0.0 --port 8080
+    env_file:
+      - ../../.env
+    environment:
+      - HR_API_URL=http://hr-orchestrator:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - orchestrator-data:/app/data
+      - recordings-data:/app/recordings
+
+  hr-agent:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    container_name: hr-agent
+    command: python agent.py start
+    env_file:
+      - ../../.env
+    environment:
+      - HR_API_URL=http://hr-orchestrator:8080
+    depends_on:
+      - hr-orchestrator
+    volumes:
+      - recordings-data:/app/recordings
+
+volumes:
+  orchestrator-data:
+  recordings-data:
