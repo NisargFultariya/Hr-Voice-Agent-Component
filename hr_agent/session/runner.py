@@ -117,6 +117,28 @@ async def run_agent_session(ctx: JobContext):
     # 6. Audio Recorder setup
     recorder = CallAudioRecorder(call_id)
 
+    # 7. Bind PSTN disconnect events
+    call_ended = asyncio.Event()
+    def on_candidate_disconnect():
+        call_ended.set()
+
+    bind_pstn_events(ctx.room, on_candidate_disconnect)
+
+    @session.on("error")
+    def on_session_error(error):
+        logger.error(f"LiveKit AgentSession pipeline error: {error}")
+        async def handle_error_gracefully():
+            try:
+                error_message = "I am sorry, we are experiencing connection issues. We will connect with you later."
+                session.say(error_message)
+                await asyncio.sleep(4.0)
+            except Exception as e:
+                logger.error(f"Failed to speak fallback error: {e}")
+            finally:
+                call_ended.set()
+        
+        asyncio.create_task(handle_error_gracefully())
+
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(
         track: rtc.Track,
@@ -134,64 +156,70 @@ async def run_agent_session(ctx: JobContext):
         if track.kind == rtc.TrackKind.KIND_AUDIO and isinstance(track, rtc.LocalAudioTrack):
             recorder.start_agent_recording(track)
 
-    # 7. Bind PSTN disconnect events
-    call_ended = asyncio.Event()
-    def on_candidate_disconnect():
-        call_ended.set()
+    watcher_task = None
+    try:
+        # 8. Start Session
+        await session.start(room=ctx.room, agent=hr_agent)
+        logger.info("AgentSession running in room")
 
-    bind_pstn_events(ctx.room, on_candidate_disconnect)
+        if initial_greeting:
+            # Wait for candidate to join the room
+            logger.info("Waiting for candidate participant to join the room...")
+            async def wait_for_participant():
+                if any(p.identity != ctx.room.local_participant.identity for p in ctx.room.remote_participants.values()):
+                    return
+                
+                loop = asyncio.get_running_loop()
+                fut = loop.create_future()
+                
+                @ctx.room.on("participant_connected")
+                def on_p_connected(participant):
+                    logger.info(f"Participant connected: {participant.identity}")
+                    if not fut.done():
+                        fut.set_result(True)
+                
+                try:
+                    await asyncio.wait_for(fut, timeout=60.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Timeout waiting for candidate participant to join. Proceeding anyway.")
 
-    # 8. Start Session
-    await session.start(room=ctx.room, agent=hr_agent)
-    logger.info("AgentSession running in room")
+            await wait_for_participant()
 
-    if initial_greeting:
-        # Wait for candidate to join the room
-        logger.info("Waiting for candidate participant to join the room...")
-        async def wait_for_participant():
-            if any(p.identity != ctx.room.local_participant.identity for p in ctx.room.remote_participants.values()):
-                return
-            
-            loop = asyncio.get_running_loop()
-            fut = loop.create_future()
-            
-            @ctx.room.on("participant_connected")
-            def on_p_connected(participant):
-                logger.info(f"Participant connected: {participant.identity}")
-                if not fut.done():
-                    fut.set_result(True)
-            
-            try:
-                await asyncio.wait_for(fut, timeout=60.0)
-            except asyncio.TimeoutError:
-                logger.warning("Timeout waiting for candidate participant to join. Proceeding anyway.")
+            logger.info(f"Speaking initial greeting: {initial_greeting}")
+            await asyncio.sleep(1.5)
+            session.say(initial_greeting)
 
-        await wait_for_participant()
+        # 9. Watch Tool Submission
+        async def watch_tool_submission():
+            while not state.submitted and not call_ended.is_set():
+                await asyncio.sleep(0.5)
+            if state.submitted:
+                logger.info("Tool submission detected. Letting TTS clear and closing call...")
+                await asyncio.sleep(4.0)
+                call_ended.set()
 
-        logger.info(f"Speaking initial greeting: {initial_greeting}")
-        await asyncio.sleep(1.5)
-        session.say(initial_greeting)
+        watcher_task = asyncio.create_task(watch_tool_submission())
 
-    # 9. Watch Tool Submission
-    async def watch_tool_submission():
-        while not state.submitted and not call_ended.is_set():
-            await asyncio.sleep(0.5)
-        if state.submitted:
-            logger.info("Tool submission detected. Letting TTS clear and closing call...")
+        # Wait for call completion event
+        await call_ended.wait()
+        logger.info("Call ended. Compiling results...")
+
+    except Exception as e:
+        logger.error(f"Error during call execution: {e}")
+        try:
+            error_message = "I am sorry, we are experiencing connection issues. We will connect with you later."
+            session.say(error_message)
             await asyncio.sleep(4.0)
-            call_ended.set()
+        except Exception as speak_err:
+            logger.error(f"Failed to speak fallback error: {speak_err}")
+    finally:
+        # Stop recording
+        logger.info("Stopping recorder and cleaning up...")
+        await recorder.stop()
 
-    watcher_task = asyncio.create_task(watch_tool_submission())
-
-    # Wait for call completion event
-    await call_ended.wait()
-    logger.info("Call ended. Compiling results...")
-
-    # Stop recording
-    await recorder.stop()
-
-    # Cancel watcher if running
-    watcher_task.cancel()
+        # Cancel watcher if running
+        if watcher_task and not watcher_task.done():
+            watcher_task.cancel()
 
     # 10. Extract Transcript
     transcript = []

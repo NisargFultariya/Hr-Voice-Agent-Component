@@ -9,8 +9,10 @@ def bind_pstn_events(room: rtc.Room, on_disconnect_callback):
     """Binds event handlers for participant disconnections, typical of PSTN hang-ups."""
     @room.on("participant_disconnected")
     def on_participant_disconnected(participant: rtc.RemoteParticipant):
-        logger.info(f"PSTN Candidate disconnected: identity={participant.identity}, name={participant.name}")
-        on_disconnect_callback()
+        identity = participant.identity
+        if identity.startswith("candidate_") or identity.startswith("mock_candidate_") or identity == "candidate":
+            logger.info(f"PSTN Candidate disconnected: identity={identity}, name={participant.name}")
+            on_disconnect_callback()
 
 async def trigger_outbound_dial(ctx: JobContext, phone_number: str):
     """Triggers outbound SIP dial-out from the worker session using ctx.api."""
