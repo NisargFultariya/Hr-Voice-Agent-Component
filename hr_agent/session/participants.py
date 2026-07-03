@@ -58,7 +58,10 @@ class CallAudioRecorder:
     async def _record_track(self, track: rtc.AudioTrack, file_path: str, offset: float, track_type: str):
         logger.info(f"Starting local audio recording for {track_type} track: {track.sid} with offset {offset:.2f}s")
         audio_stream = rtc.AudioStream(track)
-        wav_file = None
+        
+        frames = []
+        num_channels = None
+        sample_rate = None
 
         try:
             async for frame_event in audio_stream:
@@ -66,26 +69,37 @@ class CallAudioRecorder:
                     break
 
                 frame = frame_event.frame
-                if wav_file is None:
-                    wav_file = wave.open(file_path, "wb")
-                    wav_file.setnchannels(frame.num_channels)
-                    wav_file.setsampwidth(2)  # 16-bit PCM = 2 bytes
-                    wav_file.setframerate(frame.sample_rate)
-                    logger.info(
-                        f"WAV File ({track_type}) initialized: channels={frame.num_channels}, rate={frame.sample_rate}"
-                    )
-                    # Write initial silence padding if offset is positive
-                    if offset > 0:
-                        silence_bytes = int(offset * frame.sample_rate) * frame.num_channels * 2
-                        wav_file.writeframes(b'\x00' * silence_bytes)
+                if num_channels is None:
+                    num_channels = frame.num_channels
+                    sample_rate = frame.sample_rate
 
-                wav_file.writeframes(frame.data)
+                frames.append(frame.data)
         except Exception as ex:
-            logger.error(f"Error during {track_type} audio writing: {ex}")
+            logger.error(f"Error during {track_type} audio capturing: {ex}")
         finally:
-            if wav_file:
-                wav_file.close()
-                logger.info(f"WAV File ({track_type}) saved to {file_path}")
+            # Write frames to file in a separate thread to prevent event loop blocking
+            if frames and num_channels is not None and sample_rate is not None:
+                try:
+                    await asyncio.to_thread(
+                        self._save_frames_to_file, file_path, frames, num_channels, sample_rate, offset
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to save {track_type} frames to file: {e}")
+
+    def _save_frames_to_file(self, file_path: str, frames: list, num_channels: int, sample_rate: int, offset: float):
+        logger.info(f"Saving {len(frames)} frames of captured audio to {file_path}")
+        with wave.open(file_path, "wb") as wav_file:
+            wav_file.setnchannels(num_channels)
+            wav_file.setsampwidth(2)  # 16-bit PCM = 2 bytes
+            wav_file.setframerate(sample_rate)
+            
+            # Write initial silence padding if offset is positive
+            if offset > 0:
+                silence_bytes = int(offset * sample_rate) * num_channels * 2
+                wav_file.writeframes(b'\x00' * silence_bytes)
+
+            for frame_data in frames:
+                wav_file.writeframes(frame_data)
 
     async def stop(self):
         self.stop_recording.set()
