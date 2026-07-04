@@ -32,6 +32,33 @@ services:
     volumes:
       - recordings-data:/app/recordings
 
+  inbound-dashboard:
+    build:
+      context: ../../../Inbound-Voice-Agent
+      dockerfile: Dockerfile
+    container_name: inbound-dashboard
+    command: python app.py
+    env_file:
+      - ../../../Inbound-Voice-Agent/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - inbound-db:/app/data
+
+  inbound-agent:
+    build:
+      context: ../../../Inbound-Voice-Agent
+      dockerfile: Dockerfile
+    container_name: inbound-agent
+    command: python agent.py start
+    env_file:
+      - ../../../Inbound-Voice-Agent/.env
+    depends_on:
+      - inbound-dashboard
+    volumes:
+      - inbound-db:/app/data
+
 volumes:
   orchestrator-data:
   recordings-data:
+  inbound-db:
